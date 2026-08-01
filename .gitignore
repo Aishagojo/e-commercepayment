@@ -1,0 +1,13 @@
+node_modules/
+frontend/dist/
+.env
+.env.*
+.tools/
+.lnd-data/
+*.macaroon
+*.cert
+*.key
+*.log
+.DS_Store
+.idea/
+.vscode/

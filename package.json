@@ -1,0 +1,27 @@
+{
+  "name": "e-commerce-payment",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Non-custodial Bitcoin Lightning ecommerce checkout built with React, Express, and LND",
+  "scripts": {
+    "start": "node backend/server.js",
+    "dev": "concurrently -n backend,frontend -c blue,magenta \"npm:dev:backend\" \"npm:dev:frontend\"",
+    "dev:backend": "node --env-file-if-exists=.env --watch backend/server.js",
+    "dev:frontend": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "node --test backend/server.test.js"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "qrcode": "^1.5.4",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "ws": "^8.18.3"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.7.0",
+    "concurrently": "^9.2.1",
+    "vite": "^7.1.2"
+  }
+}
