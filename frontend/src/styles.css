@@ -9,3 +9,30 @@ body { margin: 0; min-height: 100vh; background: #f5f4f0; }
 button { width: 100%; padding: 14px 18px; border: 0; border-radius: 12px; color: #171109; background: #f3a712; font: inherit; font-weight: 800; cursor: pointer; }
 button:hover { filter: brightness(1.08); }
 button:disabled { cursor: wait; opacity: .65; }
+.shell { min-height: 100vh; padding: 28px clamp(20px, 5vw, 72px) 60px; }
+.store-header { width: min(100%, 1040px); margin: 0 auto 42px; display: flex; align-items: center; justify-content: space-between; }
+.brand { display: flex; align-items: center; gap: 10px; color: #171717; font-size: 1.2rem; font-weight: 850; text-decoration: none; }
+.brand-mark { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 11px; color: white; background: #171717; }
+.secure-label { color: #74736e; font-size: .8rem; font-weight: 650; }
+.product-card { width: min(100%, 960px); margin: auto; display: grid; grid-template-columns: 1.08fr .92fr; overflow: hidden; border-radius: 24px; background: #fff; box-shadow: 0 18px 55px rgba(38, 34, 25, .09); }
+.product-visual { position: relative; min-height: 520px; display: grid; place-items: center; padding: 36px; background: #ebe9e3; }
+.product-visual img { display: block; width: 100%; max-width: 520px; mix-blend-mode: multiply; }
+.product-badge { position: absolute; top: 24px; left: 24px; padding: 8px 12px; border-radius: 999px; color: #fff; background: #171717; font-size: .72rem; font-weight: 750; }
+.product-details { display: flex; flex-direction: column; justify-content: center; padding: clamp(32px, 5vw, 60px); }
+.eyebrow { color: #d76b12; font-size: .72rem; font-weight: 850; letter-spacing: .14em; text-transform: uppercase; }
+h1, h2 { margin: 12px 0; line-height: 1.1; }
+p { color: #706f6a; line-height: 1.6; }
+.product-details h1 { margin-top: 10px; font-size: clamp(2rem, 4vw, 3.2rem); letter-spacing: -.04em; }
+.description { margin: 4px 0 26px; font-size: .93rem; }
+.selection-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 26px; }
+.selection-row div { padding: 13px 15px; border-radius: 11px; background: #f5f4f0; }
+.selection-row span, .selection-row strong { display: block; }
+.selection-row span { margin-bottom: 4px; color: #8b8982; font-size: .7rem; }
+.selection-row strong { font-size: .85rem; }
+.total-row { display: flex; align-items: center; justify-content: space-between; padding-top: 20px; border-top: 1px solid #eceae4; }
+.total-row > span { color: #74736e; font-size: .85rem; }
+.total-row strong { font-size: 1.35rem; }
+.total-row small { color: #8b8982; font-size: .65rem; }
+.pay-button { margin-top: 24px; display: flex; align-items: center; justify-content: center; gap: 9px; color: #fff; background: #171717; box-shadow: 0 8px 18px rgba(23, 23, 23, .13); }
+.bitcoin-icon { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; color: #171717; background: #f59d18; font-size: .95rem; }
+.payment-note { margin: 12px 0 0; text-align: center; font-size: .72rem; }
