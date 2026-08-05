@@ -30,6 +30,52 @@ class LndClient {
       throw new Error(`LND credentials are unavailable: ${error.message}`);
     }
   }
+
+  request(method, requestPath, body) {
+    const { ca, macaroon } = this.credentials();
+    const payload = body ? JSON.stringify(body) : undefined;
+
+    return new Promise((resolve, reject) => {
+      const request = https.request({
+        hostname: this.host,
+        port: this.port,
+        path: requestPath,
+        method,
+        ca,
+        servername: this.host,
+        headers: {
+          'Grpc-Metadata-macaroon': macaroon,
+          ...(payload ? {
+            'Content-Type': 'application/json',
+            'Content-Length': Buffer.byteLength(payload)
+          } : {})
+        },
+        timeout: 10_000
+      }, (response) => {
+        let responseBody = '';
+        response.setEncoding('utf8');
+        response.on('data', (chunk) => { responseBody += chunk; });
+        response.on('end', () => {
+          let data = {};
+          try {
+            data = responseBody ? JSON.parse(responseBody) : {};
+          } catch {
+            return reject(new Error('LND returned an invalid JSON response'));
+          }
+
+          if (response.statusCode < 200 || response.statusCode >= 300) {
+            return reject(new Error(data.message || `LND request failed with status ${response.statusCode}`));
+          }
+          return resolve(data);
+        });
+      });
+
+      request.on('timeout', () => request.destroy(new Error('LND request timed out')));
+      request.on('error', (error) => reject(new Error(`Cannot reach LND: ${error.message}`)));
+      if (payload) request.write(payload);
+      request.end();
+    });
+  }
 }
 
 module.exports = { LndClient };
