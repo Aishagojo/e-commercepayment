@@ -76,6 +76,29 @@ class LndClient {
       request.end();
     });
   }
+
+  async createInvoice({ sats, memo, expirySeconds }) {
+    const response = await this.request('POST', '/v1/invoices', {
+      value: String(sats),
+      memo,
+      expiry: String(expirySeconds),
+      private: true
+    });
+
+    return {
+      paymentRequest: response.payment_request,
+      paymentHash: Buffer.from(response.r_hash, 'base64').toString('hex')
+    };
+  }
+
+  lookupInvoice(paymentHash) {
+    return this.request('GET', `/v1/invoice/${encodeURIComponent(paymentHash)}`);
+  }
+
+  async health() {
+    await this.request('GET', '/v1/invoices?num_max_invoices=1');
+    return { connected: true, network: this.network };
+  }
 }
 
 module.exports = { LndClient };
