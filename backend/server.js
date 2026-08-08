@@ -57,6 +57,49 @@ function createApplication(options = {}) {
     }
   }
 
+  app.post('/api/v1/invoices', async (req, res) => {
+    const { order_id: orderId, fiat_amount: rawFiatAmount } = req.body;
+    const fiatAmount = Number(rawFiatAmount);
+
+    if (!orderId || typeof orderId !== 'string') {
+      return res.status(400).json({ error: 'order_id is required' });
+    }
+    if (!Number.isFinite(fiatAmount) || fiatAmount <= 0) {
+      return res.status(400).json({ error: 'fiat_amount must be greater than zero' });
+    }
+
+    const id = crypto.randomUUID();
+    const satsDue = Math.round(fiatAmount * SATS_PER_USD);
+    try {
+      const lndInvoice = await paymentService.createInvoice({
+        sats: satsDue,
+        memo: `Order ${orderId.trim()}`,
+        expirySeconds: Math.floor(INVOICE_LIFETIME_MS / 1000)
+      });
+      const qrCode = await QRCode.toBuffer(lndInvoice.paymentRequest.toUpperCase(), {
+        type: 'png',
+        width: 320,
+        margin: 2
+      });
+      const invoice = {
+        id,
+        orderId: orderId.trim(),
+        fiatAmount: Number(fiatAmount.toFixed(2)),
+        satsDue,
+        paymentRequest: lndInvoice.paymentRequest,
+        paymentHash: lndInvoice.paymentHash,
+        qrCode,
+        status: 'PENDING',
+        expiresAt: new Date(Date.now() + INVOICE_LIFETIME_MS).toISOString()
+      };
+
+      invoices.set(id, invoice);
+      return res.status(201).json(publicInvoice(invoice));
+    } catch (error) {
+      return res.status(503).json({ error: error.message });
+    }
+  });
+
   app.get('/{*path}', (req, res, next) => {
     if (req.path.startsWith('/api/')) return next();
     return res.sendFile(path.join(frontendDist, 'index.html'), (error) => {
