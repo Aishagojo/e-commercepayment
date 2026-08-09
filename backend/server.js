@@ -100,6 +100,14 @@ function createApplication(options = {}) {
     }
   });
 
+  app.get('/api/v1/invoices/:id/qr', (req, res) => {
+    const invoice = invoices.get(req.params.id);
+    if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
+    res.set('Cache-Control', 'private, no-store');
+    res.type('png');
+    return res.send(invoice.qrCode);
+  });
+
   app.get('/{*path}', (req, res, next) => {
     if (req.path.startsWith('/api/')) return next();
     return res.sendFile(path.join(frontendDist, 'index.html'), (error) => {
