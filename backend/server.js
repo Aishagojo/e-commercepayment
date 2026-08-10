@@ -43,6 +43,23 @@ function createApplication(options = {}) {
     return invoice;
   }
 
+  async function syncInvoiceStatus(invoice) {
+    refreshStatus(invoice);
+    if (invoice.status !== 'PENDING') return invoice;
+
+    const lndInvoice = await paymentService.lookupInvoice(invoice.paymentHash);
+    if (lndInvoice.state === 'SETTLED') {
+      invoice.status = 'PAID';
+      invoice.satsReceived = Number(lndInvoice.amt_paid_sat || invoice.satsDue);
+      invoice.paidAt = new Date(Number(lndInvoice.settle_date) * 1000).toISOString();
+      broadcast(invoice);
+    } else if (lndInvoice.state === 'CANCELED') {
+      invoice.status = 'EXPIRED';
+      broadcast(invoice);
+    }
+    return invoice;
+  }
+
   function broadcast(invoice) {
     const clients = subscribers.get(invoice.id);
     if (!clients) return;
@@ -95,6 +112,16 @@ function createApplication(options = {}) {
 
       invoices.set(id, invoice);
       return res.status(201).json(publicInvoice(invoice));
+    } catch (error) {
+      return res.status(503).json({ error: error.message });
+    }
+  });
+
+  app.get('/api/v1/invoices/:id', async (req, res) => {
+    const invoice = invoices.get(req.params.id);
+    if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
+    try {
+      return res.json(publicInvoice(await syncInvoiceStatus(invoice)));
     } catch (error) {
       return res.status(503).json({ error: error.message });
     }
