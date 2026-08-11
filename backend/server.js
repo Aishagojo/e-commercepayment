@@ -135,6 +135,14 @@ function createApplication(options = {}) {
     return res.send(invoice.qrCode);
   });
 
+  app.get('/api/v1/lnd/health', async (_req, res) => {
+    try {
+      return res.json(await paymentService.health());
+    } catch (error) {
+      return res.status(503).json({ connected: false, error: error.message });
+    }
+  });
+
   app.get('/{*path}', (req, res, next) => {
     if (req.path.startsWith('/api/')) return next();
     return res.sendFile(path.join(frontendDist, 'index.html'), (error) => {
