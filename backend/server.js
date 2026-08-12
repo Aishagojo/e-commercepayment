@@ -150,6 +150,35 @@ function createApplication(options = {}) {
     });
   });
 
+  server.on('upgrade', (request, socket, head) => {
+    const match = request.url?.match(/^\/api\/v1\/invoices\/([^/]+)\/ws$/);
+    if (!match || !invoices.has(match[1])) {
+      socket.write('HTTP/1.1 404 Not Found\r\n\r\n');
+      socket.destroy();
+      return;
+    }
+
+    request.invoiceId = match[1];
+    wss.handleUpgrade(request, socket, head, (ws) => wss.emit('connection', ws, request));
+  });
+
+  wss.on('connection', (ws, request) => {
+    const { invoiceId } = request;
+    const clients = subscribers.get(invoiceId) || new Set();
+    clients.add(ws);
+    subscribers.set(invoiceId, clients);
+
+    ws.send(JSON.stringify({
+      event: 'INVOICE_UPDATED',
+      invoice: publicInvoice(refreshStatus(invoices.get(invoiceId)))
+    }));
+
+    ws.on('close', () => {
+      clients.delete(ws);
+      if (clients.size === 0) subscribers.delete(invoiceId);
+    });
+  });
+
   return { app, server, invoices };
 }
 
