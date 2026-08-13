@@ -179,6 +179,19 @@ function createApplication(options = {}) {
     });
   });
 
+  const invoiceMonitor = setInterval(async () => {
+    for (const invoice of invoices.values()) {
+      if (invoice.status !== 'PENDING') continue;
+      try {
+        await syncInvoiceStatus(invoice);
+      } catch (error) {
+        console.error(`Could not check LND invoice ${invoice.id}: ${error.message}`);
+      }
+    }
+  }, 2_000);
+  invoiceMonitor.unref();
+  server.on('close', () => clearInterval(invoiceMonitor));
+
   return { app, server, invoices };
 }
 
