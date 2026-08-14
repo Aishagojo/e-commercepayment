@@ -1,4 +1,131 @@
+import { useEffect, useRef, useState } from 'react';
+
+const API_URL = import.meta.env.VITE_API_URL || '';
+
+function formatCountdown(expiresAt) {
+  const remaining = Math.max(0, Date.parse(expiresAt) - Date.now());
+  const minutes = Math.floor(remaining / 60_000);
+  const seconds = Math.floor((remaining % 60_000) / 1_000);
+  return `${minutes}:${String(seconds).padStart(2, '0')}`;
+}
+
+function CheckoutModal({ onClose }) {
+  const [invoice, setInvoice] = useState(null);
+  const [countdown, setCountdown] = useState('15:00');
+  const [error, setError] = useState('');
+  const [copied, setCopied] = useState('');
+  const [qrError, setQrError] = useState(false);
+  const dialogRef = useRef(null);
+
+  useEffect(() => {
+    dialogRef.current?.showModal();
+    const controller = new AbortController();
+
+    async function createInvoice() {
+      try {
+        const response = await fetch(`${API_URL}/api/v1/invoices`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ order_id: `ORDER-${Date.now()}`, fiat_amount: 20 }),
+          signal: controller.signal
+        });
+        if (!response.ok) throw new Error('Could not create the invoice.');
+        setInvoice(await response.json());
+      } catch (requestError) {
+        if (requestError.name !== 'AbortError') setError(requestError.message);
+      }
+    }
+
+    createInvoice();
+    return () => controller.abort();
+  }, []);
+
+  function close() {
+    dialogRef.current?.close();
+    onClose();
+  }
+
+  async function copyValue(label, value) {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(label);
+      window.setTimeout(() => setCopied(''), 1500);
+    } catch {
+      setError('Could not copy automatically. Select the text and copy it manually.');
+    }
+  }
+
+  return (
+    <dialog ref={dialogRef} onCancel={close}>
+      <button className="close" aria-label="Close" onClick={close}>×</button>
+      {!invoice && !error && (
+        <div className="centered"><div className="spinner" /><p>Creating invoice…</p></div>
+      )}
+
+      {invoice?.status === 'PENDING' && (
+        <section>
+          <span className="eyebrow">Lightning payment</span>
+          <h2>Scan to pay</h2>
+          {!qrError ? (
+            <img
+              className="qr"
+              src={invoice.qr_code}
+              alt="Lightning payment QR code"
+              onError={() => setQrError(true)}
+            />
+          ) : (
+            <p className="error">The QR image could not be displayed. Copy the payment request below.</p>
+          )}
+          <div className="amount"><strong>{invoice.sats_due.toLocaleString()}</strong> sats</div>
+          <div className="status pending">Waiting for payment</div>
+          <p className="expires">Invoice expires in <strong>{countdown}</strong></p>
+
+          <div className="payment-details">
+            <div className="detail-heading">
+              <span>Lightning payment request</span>
+              <button className="copy-button" onClick={() => copyValue('request', invoice.payment_request)}>
+                {copied === 'request' ? 'Copied' : 'Copy'}
+              </button>
+            </div>
+            <code>{invoice.payment_request}</code>
+          </div>
+
+          <div className="payment-details invoice-id">
+            <div className="detail-heading">
+              <span>Invoice ID</span>
+              <button className="copy-button" onClick={() => copyValue('id', invoice.invoice_id)}>
+                {copied === 'id' ? 'Copied' : 'Copy'}
+              </button>
+            </div>
+            <code>{invoice.invoice_id}</code>
+          </div>
+          <p className="hint real-payment">Scan with a Lightning wallet to complete your payment.</p>
+        </section>
+      )}
+
+      {invoice?.status === 'PAID' && (
+        <section className="centered success">
+          <div className="check">✓</div>
+          <h2>Payment received</h2>
+          <p>Your simulated order is confirmed.</p>
+          <button onClick={close}>Done</button>
+        </section>
+      )}
+
+      {invoice?.status === 'EXPIRED' && (
+        <section className="centered">
+          <h2>Invoice expired</h2>
+          <p>Close this window and create a new invoice to try again.</p>
+        </section>
+      )}
+
+      {error && <p className="error">{error}</p>}
+    </dialog>
+  );
+}
+
 export default function App() {
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
 
   return (
     <main className="shell">
@@ -29,13 +156,14 @@ export default function App() {
             <strong>$20.00 <small>USD</small></strong>
           </div>
 
-          <button className="pay-button" disabled>
+          <button className="pay-button" onClick={() => setCheckoutOpen(true)}>
             <span className="bitcoin-icon">₿</span>
             Pay with Bitcoin
           </button>
           <p className="payment-note">Fast, secure payment via the Lightning Network</p>
         </div>
       </section>
+      {checkoutOpen && <CheckoutModal onClose={() => setCheckoutOpen(false)} />}
     </main>
   );
 }
