@@ -40,6 +40,33 @@ function CheckoutModal({ onClose }) {
     return () => controller.abort();
   }, []);
 
+  useEffect(() => {
+    if (!invoice || invoice.status !== 'PENDING') return undefined;
+
+    setCountdown(formatCountdown(invoice.expires_at));
+    const timer = window.setInterval(() => {
+      const nextCountdown = formatCountdown(invoice.expires_at);
+      setCountdown(nextCountdown);
+      if (nextCountdown === '0:00') {
+        setInvoice((current) => ({ ...current, status: 'EXPIRED' }));
+      }
+    }, 1000);
+
+    const apiOrigin = API_URL || window.location.origin;
+    const wsUrl = new URL(`/api/v1/invoices/${invoice.invoice_id}/ws`, apiOrigin);
+    wsUrl.protocol = wsUrl.protocol === 'https:' ? 'wss:' : 'ws:';
+    const socket = new WebSocket(wsUrl);
+    socket.addEventListener('message', ({ data }) => {
+      const message = JSON.parse(data);
+      if (message.invoice) setInvoice(message.invoice);
+    });
+
+    return () => {
+      window.clearInterval(timer);
+      socket.close();
+    };
+  }, [invoice?.invoice_id]);
+
   function close() {
     dialogRef.current?.close();
     onClose();
