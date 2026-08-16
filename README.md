@@ -278,7 +278,7 @@ The initial plain browser prototype was replaced with React 19 and Vite. The
 checkout now includes:
 
 - A product page for an example shoe.
-- A one-dollar order total.
+- A $20 order total.
 - A Bitcoin payment modal.
 - A generated QR image.
 - The full Lightning payment request.
@@ -290,13 +290,6 @@ Run both development services:
 
 ```bash
 npm run dev
-```
-
-Development URLs:
-
-```text
-React:  http://127.0.0.1:5173
-API:    http://127.0.0.1:3000
 ```
 
 Create a production frontend build:
@@ -408,7 +401,7 @@ the order to `PAID`; the old simulated-payment endpoint and button were removed.
 The browser receives payment updates through:
 
 ```text
-ws://localhost:3000/api/v1/invoices/{invoice_id}/ws
+/api/v1/invoices/{invoice_id}/ws
 ```
 
 QR images are served as PNG files from:
@@ -523,17 +516,14 @@ Populate it with the Merchant values shown in Polar's **Connect** tab:
 ```dotenv
 PORT=3000
 LND_NETWORK=regtest
-LND_REST_HOST=localhost
+LND_REST_HOST=<merchant-lnd-host>
 LND_REST_PORT=<merchant-rest-port>
 LND_TLS_PATH=<absolute-path-to-Merchant-tls.cert>
 LND_MACAROON_PATH=<absolute-path-to-Merchant-regtest-invoice.macaroon>
 ```
 
-Verify the selected network before creating an invoice:
-
-```bash
-curl http://127.0.0.1:3000/api/v1/lnd/health
-```
+Verify the selected network through `GET /api/v1/lnd/health` before creating
+an invoice.
 
 Expected result:
 
@@ -554,7 +544,7 @@ npm run dev
 
 Then:
 
-1. Open <http://127.0.0.1:5173>.
+1. Open the address printed by Vite after the application starts.
 2. Select **Pay with Bitcoin**.
 3. Confirm the payment request begins with `lnbcrt`.
 4. Copy the entire Lightning payment request—not the internal UUID invoice ID.
@@ -654,19 +644,14 @@ Start React and Express together:
 npm run dev
 ```
 
-Open <http://localhost:5173>.
-
 ## Regtest setup
 
 Follow [docs/REGTEST_SETUP.md](docs/REGTEST_SETUP.md) to install Docker and
 Polar, create the Merchant and Customer LND nodes, fund them with free regtest
 coins, and open the test channel.
 
-Before creating an invoice, verify the backend is connected to regtest:
-
-```bash
-curl http://localhost:3000/api/v1/lnd/health
-```
+Before creating an invoice, call `GET /api/v1/lnd/health` and verify that the
+backend is connected to regtest.
 
 Expected response:
 
@@ -694,25 +679,6 @@ mainnet invoice and never move bitcoin.
 - There is no PostgreSQL database or webhook retry queue yet.
 - The mainnet node has no channels or inbound liquidity.
 - The application has not completed a real-value mainnet payment.
-
-## Render deployment
-
-Render can host the React/Express web service and supports WebSockets. However,
-a local Polar regtest network is not reachable from Render. Render's filesystem
-is ephemeral by default, so a persistent LND wallet would require carefully
-designed persistent infrastructure and should not be added to this learning
-deployment.
-
-The intended deployment path is:
-
-```text
-Render web service: React + Express + WebSockets
-Render Postgres: merchants, orders, invoices, webhook deliveries
-External/private LND service: added only after production hardening
-```
-
-For now, run Polar and LND locally and use Render later for a portfolio/demo
-deployment of the web application and database.
 
 ## Security notice
 
