@@ -159,6 +159,28 @@ sequenceDiagram
 PostgreSQL, merchant webhooks, live BTC/USD pricing, authentication, and payment
 auditing are planned later steps.
 
+## Official installation documentation
+
+Use the official project documentation when installing or updating the tools:
+
+| Tool | Why it is needed | Official documentation |
+|---|---|---|
+| Node.js and npm | Runs the React build tools and Express API | [Download Node.js](https://nodejs.org/en/download) |
+| Docker Engine | Runs Polar's Bitcoin and Lightning containers | [Install Docker Engine](https://docs.docker.com/engine/install/) |
+| Docker Compose | Manages the containers created by Polar | [Install Docker Compose](https://docs.docker.com/compose/install/) |
+| Polar | Creates the private regtest network and managed nodes | [Polar website](https://lightningpolar.com/) and [Polar releases](https://github.com/jamaljsr/polar/releases) |
+| Bitcoin Core | Provides the regtest Bitcoin blockchain | [Bitcoin Core downloads](https://bitcoincore.org/en/download/) |
+| LND and `lncli` | Creates wallets, channels, invoices, and payments | [LND installation guide](https://docs.lightning.engineering/lightning-network-tools/lnd/run-lnd) |
+| LND REST API | Defines the invoice endpoints used by the backend | [LND API reference](https://lightning.engineering/api-docs/api/lnd/) |
+| React | Implements the customer checkout | [React documentation](https://react.dev/) |
+| Vite | Runs and builds the React frontend | [Vite guide](https://vite.dev/guide/) |
+
+For the recommended regtest setup, install Node.js, Docker, Docker Compose, and
+Polar. Polar downloads and runs its own Bitcoin Core and LND Docker images when
+the network starts, so separate Bitcoin Core and LND installations are not
+required for the free regtest demonstration. The standalone LND instructions
+in this README document the optional unfunded mainnet learning experiment.
+
 ## Wallets and nodes
 
 LND (Lightning Network Daemon) is used as both the Lightning node and wallet.
@@ -257,7 +279,6 @@ e-commercepayment/
 │       └── styles.css
 ├── docs/
 ├── scripts/
-├── .env.example
 ├── package.json
 └── vite.config.js
 ```
@@ -505,10 +526,10 @@ Merchant remote/inbound: approximately 993,060 sats total
 
 ### Step 9: Connect the backend to Polar's Merchant node
 
-Copy the environment template:
+Create the ignored environment file:
 
 ```bash
-cp .env.example .env
+touch .env
 ```
 
 Populate it with the Merchant values shown in Polar's **Connect** tab:
@@ -629,10 +650,10 @@ Requirements:
 npm install
 ```
 
-Copy the environment template:
+Create the ignored environment file:
 
 ```bash
-cp .env.example .env
+touch .env
 ```
 
 Set the LND REST port, TLS certificate path, invoice macaroon path, and network
