@@ -58,3 +58,11 @@ dialog::backdrop { background: #030406cc; backdrop-filter: blur(5px); }
 .error { color: #ff8d8d; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+@media (max-width: 760px) {
+  .shell { padding: 22px 16px 40px; }
+  .store-header { margin-bottom: 22px; }
+  .product-card { grid-template-columns: 1fr; border-radius: 18px; }
+  .product-visual { min-height: 300px; padding: 30px; }
+  .product-visual img { max-width: 360px; }
+  .product-details { padding: 30px 24px; }
+}
