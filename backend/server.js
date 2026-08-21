@@ -75,18 +75,22 @@ function createApplication(options = {}) {
   }
 
   app.post('/api/v1/invoices', async (req, res) => {
-    const { order_id: orderId, fiat_amount: rawFiatAmount } = req.body;
+    const { order_id: orderId, fiat_amount: rawFiatAmount } = req.body || {};
     const fiatAmount = Number(rawFiatAmount);
 
-    if (!orderId || typeof orderId !== 'string') {
+    if (typeof orderId !== 'string' || !orderId.trim()) {
       return res.status(400).json({ error: 'order_id is required' });
     }
-    if (!Number.isFinite(fiatAmount) || fiatAmount <= 0) {
+    if (!['number', 'string'].includes(typeof rawFiatAmount) ||
+        !Number.isFinite(fiatAmount) || fiatAmount <= 0) {
       return res.status(400).json({ error: 'fiat_amount must be greater than zero' });
     }
 
     const id = crypto.randomUUID();
     const satsDue = Math.round(fiatAmount * SATS_PER_USD);
+    if (!Number.isSafeInteger(satsDue) || satsDue < 1) {
+      return res.status(400).json({ error: 'fiat_amount must convert to a positive, safe integer number of sats' });
+    }
     try {
       const lndInvoice = await paymentService.createInvoice({
         sats: satsDue,

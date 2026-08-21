@@ -84,3 +84,27 @@ test('reports payment service health', async () => {
   assert.equal(response.status, 200);
   assert.deepEqual(await response.json(), { connected: true, network: 'test' });
 });
+
+test('rejects invalid invoice values before contacting the payment service', async () => {
+  const originalCount = fakeInvoices.size;
+  const invalidBodies = [
+    { order_id: '   ', fiat_amount: 20 },
+    { order_id: 'ORDER-INVALID', fiat_amount: true },
+    { order_id: 'ORDER-INVALID', fiat_amount: [20] },
+    { order_id: 'ORDER-INVALID', fiat_amount: {} },
+    { order_id: 'ORDER-INVALID', fiat_amount: 0.000001 },
+    { order_id: 'ORDER-INVALID', fiat_amount: Number.MAX_VALUE }
+  ];
+  for (const body of invalidBodies) {
+    const response = await fetch(`${baseUrl}/api/v1/invoices`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    assert.equal(response.status, 400, JSON.stringify(body));
+    assert.equal(typeof (await response.json()).error, 'string');
+  }
+  const noBody = await fetch(`${baseUrl}/api/v1/invoices`, { method: 'POST' });
+  assert.equal(noBody.status, 400);
+  assert.equal(fakeInvoices.size, originalCount);
+});
