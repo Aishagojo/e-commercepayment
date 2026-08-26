@@ -159,3 +159,79 @@ sequenceDiagram
 PostgreSQL, merchant webhooks, live BTC/USD pricing, authentication, and payment
 auditing are planned later steps.
 
+## Official installation documentation
+
+Use the official project documentation when installing or updating the tools:
+
+| Tool | Why it is needed | Official documentation |
+|---|---|---|
+| Node.js and npm | Runs the React build tools and Express API | [Download Node.js](https://nodejs.org/en/download) |
+| Docker Engine | Runs Polar's Bitcoin and Lightning containers | [Install Docker Engine](https://docs.docker.com/engine/install/) |
+| Docker Compose | Manages the containers created by Polar | [Install Docker Compose](https://docs.docker.com/compose/install/) |
+| Polar | Creates the private regtest network and managed nodes | [Polar website](https://lightningpolar.com/) and [Polar releases](https://github.com/jamaljsr/polar/releases) |
+| Bitcoin Core | Provides the regtest Bitcoin blockchain | [Bitcoin Core downloads](https://bitcoincore.org/en/download/) |
+| LND and `lncli` | Creates wallets, channels, invoices, and payments | [LND installation guide](https://docs.lightning.engineering/lightning-network-tools/lnd/run-lnd) |
+| LND REST API | Defines the invoice endpoints used by the backend | [LND API reference](https://lightning.engineering/api-docs/api/lnd/) |
+| React | Implements the customer checkout | [React documentation](https://react.dev/) |
+| Vite | Runs and builds the React frontend | [Vite guide](https://vite.dev/guide/) |
+
+For the recommended regtest setup, install Node.js, Docker, Docker Compose, and
+Polar. Polar downloads and runs its own Bitcoin Core and LND Docker images when
+the network starts, so separate Bitcoin Core and LND installations are not
+required for the free regtest demonstration. The standalone LND instructions
+in this README document the optional unfunded mainnet learning experiment.
+
+## Wallets and nodes
+
+LND (Lightning Network Daemon) is used as both the Lightning node and wallet.
+The free regtest environment uses two separate LND wallets:
+
+- **Merchant LND:** creates invoices and receives store payments.
+- **Customer LND:** represents a shopper and pays the merchant invoice.
+
+The customer node opens a regtest channel toward the merchant node. This gives
+the customer outbound liquidity and the merchant inbound liquidity without
+using valuable bitcoin.
+
+Wallet seeds, passwords, TLS private keys, macaroons, databases, and node data
+must never be committed to Git.
+
+## Networks used
+
+### Regtest — active payment-development target
+
+Regtest is a private Bitcoin network created locally with Polar. Its addresses,
+keys, signatures, blocks, Lightning channels, invoices, and settlements use the
+real Bitcoin and Lightning protocols, but its coins have no monetary value.
+
+- Bitcoin addresses start with `bcrt1...`.
+- Lightning invoices start with `lnbcrt...`.
+- Blocks and coins are generated locally.
+- Complete payments can be tested without purchasing bitcoin.
+
+The regtest environment is running with Merchant and Customer LND nodes and two
+active private channels. A completed settlement test will be documented here
+after the first `lnbcrt...` invoice is paid from Customer to Merchant.
+
+### Mainnet — connected, unfunded learning node
+
+An LND v0.20.0-beta mainnet node was installed, checksum-verified, synchronized,
+and connected to the backend successfully. It has not been funded, no channels
+have been opened, and no mainnet payment has been performed.
+
+Mainnet addresses and invoices are real and can hold monetary value. Mainnet is
+kept unfunded while the project is under development.
+
+### Important separation
+
+| Regtest | Mainnet |
+|---|---|
+| Free local coins | Valuable BTC |
+| `bcrt1...` addresses | `bc1...` addresses |
+| `lnbcrt...` invoices | `lnbc...` invoices |
+| Locally generated blocks | Publicly mined blocks |
+| Safe for development | Financial loss is possible |
+
+Regtest coins, addresses, invoices, and channels cannot be transferred to or
+used on mainnet.
+
