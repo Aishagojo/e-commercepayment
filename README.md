@@ -235,3 +235,364 @@ kept unfunded while the project is under development.
 Regtest coins, addresses, invoices, and channels cannot be transferred to or
 used on mainnet.
 
+## Current status
+
+- [x] Responsive React product checkout
+- [x] Express invoice API
+- [x] LND REST client with TLS verification
+- [x] Restricted invoice-macaroon authentication
+- [x] BOLT11 QR-code generation
+- [x] Invoice expiration countdown
+- [x] LND settlement polling
+- [x] WebSocket status updates
+- [x] Mainnet LND installation and synchronization
+- [x] Network-selectable LND configuration
+- [x] Safe unit tests using an injected fake payment service
+- [x] Start the two-node Polar regtest network
+- [x] Fund the Customer with free regtest coins
+- [x] Open private Customer-to-Merchant channels
+- [ ] Complete the first regtest Lightning payment
+- [ ] Store invoices in PostgreSQL
+- [ ] Add signed merchant webhooks
+- [ ] Replace the fixed exchange rate with a live provider
+- [ ] Add authentication, idempotency, logging, and deployment hardening
+
+## Build journal: everything completed so far
+
+This section records the project in the order it was built. Commands are shown
+so another developer can reproduce the work. Paths containing wallet credentials
+are examples only and must be adjusted locally.
+
+### Step 1: Create the application structure
+
+```text
+e-commercepayment/
+├── backend/
+│   ├── lnd-client.js
+│   ├── server.js
+│   └── server.test.js
+├── frontend/
+│   ├── public/images/
+│   └── src/
+│       ├── App.jsx
+│       ├── main.jsx
+│       └── styles.css
+├── docs/
+├── scripts/
+├── package.json
+└── vite.config.js
+```
+
+Install the Node.js dependencies:
+
+```bash
+npm install
+```
+
+The first backend used an in-memory simulated invoice provider. This allowed the
+API, countdown, WebSocket flow, duplicate-payment protection, and React states
+to be tested before connecting any Bitcoin infrastructure.
+
+### Step 2: Build the React checkout
+
+The initial plain browser prototype was replaced with React 19 and Vite. The
+checkout now includes:
+
+- A product page for an example shoe.
+- A $20 order total.
+- A Bitcoin payment modal.
+- A generated QR image.
+- The full Lightning payment request.
+- The internal invoice ID.
+- Copy buttons and a 15-minute timer.
+- Pending, paid, expired, loading, and error states.
+
+Run both development services:
+
+```bash
+npm run dev
+```
+
+Create a production frontend build:
+
+```bash
+npm run build
+```
+
+### Step 3: Install and verify LND for mainnet compatibility
+
+The official LND v0.20.0-beta Linux archive and checksum manifest were
+downloaded from the Lightning Network Daemon GitHub release:
+
+```bash
+mkdir -p .tools/downloads .tools/lnd
+
+curl --fail --location \
+  --output .tools/downloads/manifest-v0.20.0-beta.txt \
+  https://github.com/lightningnetwork/lnd/releases/download/v0.20.0-beta/manifest-v0.20.0-beta.txt
+
+curl --fail --location \
+  --output .tools/downloads/lnd-linux-amd64-v0.20.0-beta.tar.gz \
+  https://github.com/lightningnetwork/lnd/releases/download/v0.20.0-beta/lnd-linux-amd64-v0.20.0-beta.tar.gz
+```
+
+Verify the archive before extracting it:
+
+```bash
+grep 'lnd-linux-amd64-v0.20.0-beta.tar.gz' \
+  .tools/downloads/manifest-v0.20.0-beta.txt
+
+sha256sum .tools/downloads/lnd-linux-amd64-v0.20.0-beta.tar.gz
+```
+
+The expected and calculated SHA-256 value was:
+
+```text
+88c43d138bb2fb38ccc806da3a2d2a6845cd6a0d6a25b8a3f9ba047a73533557
+```
+
+Extract and inspect the version:
+
+```bash
+tar -xzf .tools/downloads/lnd-linux-amd64-v0.20.0-beta.tar.gz \
+  --strip-components=1 \
+  -C .tools/lnd
+
+./.tools/lnd/lnd --version
+./.tools/lnd/lncli --version
+```
+
+The project contains helper scripts that consistently point LND and `lncli` at
+the project-specific data directory:
+
+```bash
+./scripts/start-lnd.sh
+./scripts/lncli.sh create
+./scripts/lncli.sh unlock
+./scripts/lncli.sh getinfo
+```
+
+Wallet creation is interactive. The wallet password and 24-word recovery seed
+were never stored in source code or documentation.
+
+### Step 4: Synchronize the unfunded mainnet node
+
+LND was configured for mainnet with its Neutrino light client. The mainnet fee
+estimator required this configuration:
+
+```ini
+fee.url=https://nodes.lightning.computer/fees/v1/btc-fee-estimates.json
+```
+
+Synchronization was monitored with:
+
+```bash
+./scripts/lncli.sh getinfo | \
+  grep -E 'block_height|best_header_timestamp|num_peers|synced'
+```
+
+The completed node reported:
+
+```text
+synced_to_chain: true
+synced_to_graph: true
+network: mainnet
+```
+
+The mainnet wallet remained at zero balance, and no mainnet channel or payment
+was created. This validated LND installation and backend connectivity without
+risking money.
+
+### Step 5: Replace simulated invoices with the LND API
+
+The backend now authenticates using LND's restricted `invoice.macaroon` and
+verifies the node's TLS certificate. It does not use `admin.macaroon`.
+
+The backend calls:
+
+```text
+POST /v1/invoices                     Create a BOLT11 invoice
+GET  /v1/invoice/{payment_hash}       Check its LND state
+GET  /v1/invoices                     Verify LND connectivity
+```
+
+Invoice states are polled every two seconds. Only LND's `SETTLED` state changes
+the order to `PAID`; the old simulated-payment endpoint and button were removed.
+
+The browser receives payment updates through:
+
+```text
+/api/v1/invoices/{invoice_id}/ws
+```
+
+QR images are served as PNG files from:
+
+```text
+GET /api/v1/invoices/{invoice_id}/qr
+```
+
+### Step 6: Install Docker and Compose
+
+Kali Linux provided Compose under the `docker-compose` package name:
+
+```bash
+sudo apt update
+sudo apt install docker.io docker-compose
+sudo systemctl enable --now docker
+sudo usermod -aG docker "$USER"
+newgrp docker
+```
+
+Verify the installation:
+
+```bash
+docker version
+docker compose version
+docker run --rm hello-world
+```
+
+Versions used while building this project:
+
+```text
+Docker Engine: 28.5.2
+Docker Compose: 2.40.3
+```
+
+### Step 7: Install and verify Polar
+
+Polar v4.0.0 was downloaded from its official GitHub release:
+
+```bash
+curl --fail --location \
+  --output /tmp/polar-linux-amd64-v4.0.0.deb \
+  https://github.com/jamaljsr/polar/releases/download/v4.0.0/polar-linux-amd64-v4.0.0.deb
+
+sha256sum /tmp/polar-linux-amd64-v4.0.0.deb
+```
+
+The calculated checksum matched GitHub's published asset digest:
+
+```text
+227609c57bcc639c6e06ff16344c3c57e0d9d466f52e605be120378fcdb17d40
+```
+
+Install and open Polar:
+
+```bash
+sudo apt install /tmp/polar-linux-amd64-v4.0.0.deb
+polar
+```
+
+### Step 8: Create the free regtest Lightning network
+
+The Polar network is named `ecommerce-regtest` and contains:
+
+```text
+Bitcoin Core 30.0
+├── Merchant — LND 0.20.0-beta
+└── Customer — LND 0.20.0-beta
+```
+
+No Core Lightning, Eclair, Taproot Assets, or Terminal nodes are required for
+this project.
+
+The Customer received free regtest funds through Polar. The deposit form used
+`1,000,000 sats` per test deposit; these coins have no value:
+
+```text
+Customer test-deposit amount: 1,000,000 regtest sats
+Merchant deposit: 0 sats
+```
+
+Private channels were opened in this direction:
+
+```text
+Customer ──500,000-sat private channel──▶ Merchant
+```
+
+The Customer is the channel initiator, so it receives outbound capacity. The
+Merchant receives inbound capacity and can accept checkout payments. Two test
+channels were opened during development; this is harmless because all balances
+exist only on regtest.
+
+Observed channel state:
+
+```text
+Active channels: 2
+Capacity per channel: 500,000 sats
+Customer local/outbound: approximately 993,060 sats total
+Merchant remote/inbound: approximately 993,060 sats total
+```
+
+### Step 9: Connect the backend to Polar's Merchant node
+
+Create the ignored environment file:
+
+```bash
+touch .env
+```
+
+Populate it with the Merchant values shown in Polar's **Connect** tab:
+
+```dotenv
+PORT=3000
+LND_NETWORK=regtest
+LND_REST_HOST=<merchant-lnd-host>
+LND_REST_PORT=<merchant-rest-port>
+LND_TLS_PATH=<absolute-path-to-Merchant-tls.cert>
+LND_MACAROON_PATH=<absolute-path-to-Merchant-regtest-invoice.macaroon>
+```
+
+Verify the selected network through `GET /api/v1/lnd/health` before creating
+an invoice.
+
+Expected result:
+
+```json
+{"connected":true,"network":"regtest"}
+```
+
+Never pay an invoice beginning with `lnbc` during this free exercise. A valid
+regtest Lightning invoice begins with `lnbcrt`.
+
+### Step 10: Perform the regtest checkout
+
+Run the application while the Polar network remains active:
+
+```bash
+npm run dev
+```
+
+Then:
+
+1. Open the address printed by Vite after the application starts.
+2. Select **Pay with Bitcoin**.
+3. Confirm the payment request begins with `lnbcrt`.
+4. Copy the entire Lightning payment request—not the internal UUID invoice ID.
+5. In Polar, open **Customer → Payments → Pay Invoice**.
+6. Paste the `lnbcrt...` request and approve the free regtest payment.
+7. Merchant LND reports `SETTLED`.
+8. The backend changes the order from `PENDING` to `PAID`.
+9. WebSocket pushes the update to React.
+10. The checkout displays **Payment received**.
+
+Until step 6 is performed successfully, the first full settlement remains an
+open checklist item rather than a claimed result.
+
+### Step 11: Run verification
+
+```bash
+npm test
+npm run build
+```
+
+Current automated coverage verifies:
+
+- Invoice creation and retrieval.
+- Request validation.
+- QR PNG delivery.
+- Settlement reported by an injected payment provider.
+- LND health response.
+
+The automated suite injects a fake payment service and cannot move mainnet BTC.
+
