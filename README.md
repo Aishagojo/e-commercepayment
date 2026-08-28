@@ -596,3 +596,45 @@ Current automated coverage verifies:
 
 The automated suite injects a fake payment service and cannot move mainnet BTC.
 
+## Troubleshooting encountered during the build
+
+### `EADDRINUSE` on ports 3000 or 5173
+
+This means an older development process is still running:
+
+```bash
+sudo fuser -v 3000/tcp 5173/tcp
+kill <PID>
+npm run dev
+```
+
+Run only one copy of `npm run dev`.
+
+### Vite switches from 5173 to 5174
+
+Port `5173` is already occupied. Stop the older Vite process and restart rather
+than using two frontends connected to different backend instances.
+
+### Backend returns `network: mainnet`
+
+Stop immediately and do not pay the invoice. Confirm `.env` contains:
+
+```dotenv
+LND_NETWORK=regtest
+```
+
+Restart the backend and verify `/api/v1/lnd/health` before continuing.
+
+### `lncli` reports connection refused
+
+LND is not running or exited during startup. Inspect its log:
+
+```bash
+tail -n 30 .lnd-data/logs/bitcoin/mainnet/lnd.log
+```
+
+### QR image shows only alternative text
+
+The project originally returned a large embedded `data:` URL. It now serves the
+QR through a normal PNG API endpoint, which is more reliable across browsers.
+
