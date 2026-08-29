@@ -638,3 +638,57 @@ tail -n 30 .lnd-data/logs/bitcoin/mainnet/lnd.log
 The project originally returned a large embedded `data:` URL. It now serves the
 QR through a normal PNG API endpoint, which is more reliable across browsers.
 
+## Install the application
+
+Requirements:
+
+- Node.js 22 or newer
+- npm
+- A configured LND node, or Polar for free regtest payments
+
+```bash
+npm install
+```
+
+Create the ignored environment file:
+
+```bash
+touch .env
+```
+
+Set the LND REST port, TLS certificate path, invoice macaroon path, and network
+in `.env`. Never commit the populated file.
+
+Start React and Express together:
+
+```bash
+npm run dev
+```
+
+## Regtest setup
+
+Follow [docs/REGTEST_SETUP.md](docs/REGTEST_SETUP.md) to install Docker and
+Polar, create the Merchant and Customer LND nodes, fund them with free regtest
+coins, and open the test channel.
+
+Before creating an invoice, call `GET /api/v1/lnd/health` and verify that the
+backend is connected to regtest.
+
+Expected response:
+
+```json
+{"connected":true,"network":"regtest"}
+```
+
+Stop if the response says `mainnet` during a free regtest exercise.
+
+## Tests
+
+```bash
+npm test
+npm run build
+```
+
+The automated tests use a fake injected payment service. They never create a
+mainnet invoice and never move bitcoin.
+
