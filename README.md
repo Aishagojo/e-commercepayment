@@ -692,3 +692,27 @@ npm run build
 The automated tests use a fake injected payment service. They never create a
 mainnet invoice and never move bitcoin.
 
+## Current learning-only limitations
+
+- Invoice records are stored in memory and disappear after a backend restart.
+- The temporary rate is fixed at `1 USD = 1,500 sats`.
+- There is no merchant authentication.
+- There is no PostgreSQL database or webhook retry queue yet.
+- The mainnet node has no channels or inbound liquidity.
+- The application has not completed a real-value mainnet payment.
+
+## Security notice
+
+Never commit or share:
+
+- The 24-word wallet seed
+- Wallet passwords
+- `admin.macaroon` or `invoice.macaroon`
+- `tls.key`
+- `.env`
+- LND wallet databases
+- Polar node-data directories
+
+Anyone who obtains powerful LND credentials or wallet recovery material may be
+able to control or steal funds. Use regtest until the complete system has been
+tested and reviewed.
